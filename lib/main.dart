@@ -29,8 +29,6 @@ class MainExpandableNavBar extends StatefulWidget {
 
 class _MainExpandableNavBarState extends State<MainExpandableNavBar>
     with SingleTickerProviderStateMixin {
-
-
   AnimationController _controller;
   bool _expanded = false;
   double _currentHeight = _minHeight;
@@ -50,9 +48,7 @@ class _MainExpandableNavBarState extends State<MainExpandableNavBar>
 
   @override
   Widget build(BuildContext context) {
-    final Size size = MediaQuery
-        .of(context)
-        .size;
+    final Size size = MediaQuery.of(context).size;
     final double menuWidth = size.width * 0.5;
 
     final double _maxHeight = 400;
@@ -75,19 +71,23 @@ class _MainExpandableNavBarState extends State<MainExpandableNavBar>
           ),
         ),
         GestureDetector(
-
-          onVerticalDragUpdate:  (details) {
+          onVerticalDragUpdate: (details) {
             setState(() {
               final newHeight = _currentHeight + details.delta.dy;
               _controller.value = _currentHeight / _maxHeight;
               _currentHeight = newHeight.clamp(_minHeight, _maxHeight);
             });
           },
-
           onVerticalDragEnd: (details) {
-
+            if (_currentHeight < _maxHeight / 1.5) {
+              _controller.reverse();
+              _expanded = false;
+            } else {
+              _expanded = true;
+              _controller.forward(from: _currentHeight / _maxHeight);
+              _currentHeight = _maxHeight;
+            }
           },
-
           onTap: () {
             setState(() {
               _expanded = !_expanded;
@@ -101,7 +101,7 @@ class _MainExpandableNavBarState extends State<MainExpandableNavBar>
           child: AnimatedBuilder(
               animation: _controller,
               builder: (context, snapshot) {
-                final value = _controller.value;
+                final value = Curves.ease.transform(_controller.value) ;
                 return Stack(
                   children: [
                     Positioned(
@@ -118,11 +118,19 @@ class _MainExpandableNavBarState extends State<MainExpandableNavBar>
                             color: Colors.purpleAccent,
                           ),
                           height: _maxHeight,
-                          child: _expanded ? ExpandedContent() : MenuContent(onExpandedChanged: (){
-                            _expanded=true;
-                            _currentHeight=_maxHeight;
-                            _controller.forward(from: 0.0);
-                          },)),
+                          child: AnimatedSwitcher(
+                            duration: Duration(milliseconds: 200),
+                            child: _expanded
+                                ? MenuContent(
+                                    onExpandedChanged: () {
+                                      _expanded = true;
+                                      _currentHeight = _maxHeight;
+                                      _controller.forward(from: 0.0);
+                                    },
+                                    expanded: _expanded,
+                                  )
+                                : ExpandedContent(),
+                          )),
                     ),
                   ],
                 );
@@ -135,8 +143,11 @@ class _MainExpandableNavBarState extends State<MainExpandableNavBar>
 
 class MenuContent extends StatelessWidget {
   final Function onExpandedChanged;
+  final bool expanded;
 
-  const MenuContent({Key key,@required this.onExpandedChanged}) : super(key: key);
+  const MenuContent(
+      {Key key, @required this.onExpandedChanged, @required this.expanded})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +157,10 @@ class MenuContent extends StatelessWidget {
       children: [
         Icon(Icons.play_circle_fill_sharp),
         Container(width: 15),
-        GestureDetector(onTap: onExpandedChanged,
-          child: Icon(Icons.pause_circle_filled_outlined),),
+        GestureDetector(
+          onTap: onExpandedChanged,
+          child: Icon(Icons.pause_circle_filled_outlined),
+        ),
         Container(width: 15),
         Icon(Icons.forward_rounded)
       ],
@@ -158,26 +171,29 @@ class MenuContent extends StatelessWidget {
 class ExpandedContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(height: 30),
-        Container(color: Colors.black, height: 80, width: 80),
-        SizedBox(height: 15),
-        Text('Last Century', style: TextStyle(fontSize: 15)),
-        SizedBox(height: 15),
-        Text('Bloody Tear', style: TextStyle(fontSize: 20)),
-        SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.shuffle),
-            Container(width: 20),
-            Icon(Icons.pause),
-            Container(width: 20),
-            Icon(Icons.playlist_add),
-          ],
-        )
-      ],
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        children: [
+          SizedBox(height: 30),
+          Container(color: Colors.black, height: 80, width: 80),
+          SizedBox(height: 15),
+          Text('Last Century', style: TextStyle(fontSize: 15)),
+          SizedBox(height: 15),
+          Text('Bloody Tear', style: TextStyle(fontSize: 20)),
+          SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.shuffle),
+              Container(width: 20),
+              Icon(Icons.pause),
+              Container(width: 20),
+              Icon(Icons.playlist_add),
+            ],
+          )
+        ],
+      ),
     );
   }
 }
